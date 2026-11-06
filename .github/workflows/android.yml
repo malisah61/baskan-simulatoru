@@ -1,0 +1,58 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Motor testi
+        run: node test/sim.test.mjs
+
+      - name: Web dosyalarını hazırla
+        run: |
+          mkdir -p build/www
+          cp -r index.html css js build/www/
+
+      - name: Capacitor ile Android projesi oluştur
+        working-directory: build
+        run: |
+          npm init -y >/dev/null
+          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          npx cap init "Dünya Başkanı" com.malisah61.baskan --web-dir www
+          npx cap add android
+          npx cap sync android
+
+      - name: APK derle
+        working-directory: build/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../../DunyaBaskani.apk
+
+      - name: Son sürüm yayınına yükle
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete son-surum --yes --cleanup-tag 2>/dev/null || true
+          gh release create son-surum DunyaBaskani.apk \
+            --title "Son sürüm" \
+            --notes "Otomatik derlendi: ${GITHUB_SHA::7} — $(date -u +'%Y-%m-%d %H:%M') UTC" \
+            --latest
