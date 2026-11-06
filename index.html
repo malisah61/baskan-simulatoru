@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<title>Dünya Başkanı</title>
+<link rel="stylesheet" href="css/stil.css">
+</head>
+<body>
+<div id="uygulama">
+
+  <!-- GİRİŞ -->
+  <section id="ekran-giris" class="ekran aktif">
+    <div class="giris-ic">
+      <div class="logo">🌍</div>
+      <h1>DÜNYA<br><span>BAŞKANI</span></h1>
+      <p class="alt">Bir ülke seç. Her kararın halkı, hazineyi, orduyu ve dünyayı değiştirir.</p>
+      <button id="btn-devam" class="btn ana gizli">▶ Devam Et</button>
+      <button id="btn-yeni" class="btn ana">Yeni Oyun</button>
+      <button id="btn-nasil" class="btn ikincil">Nasıl Oynanır?</button>
+      <p id="rekor" class="rekor"></p>
+    </div>
+  </section>
+
+  <!-- ÜLKE SEÇİMİ -->
+  <section id="ekran-ulke" class="ekran">
+    <header class="ust-bar">
+      <button class="geri" data-git="giris">‹</button>
+      <h2>Ülkeni Seç</h2>
+      <span id="ulke-sayisi" class="sayi"></span>
+    </header>
+    <div class="arama-kutu">
+      <input id="arama" type="search" placeholder="🔍 Ülke ara..." autocomplete="off">
+      <div id="bolgeler" class="cipler"></div>
+    </div>
+    <div id="ulke-listesi" class="liste"></div>
+  </section>
+
+  <!-- OYUN -->
+  <section id="ekran-oyun" class="ekran">
+    <header class="oyun-ust">
+      <div class="ulke-bilgi">
+        <span id="o-bayrak" class="bayrak"></span>
+        <div>
+          <div id="o-ulke" class="ulke-ad"></div>
+          <div id="o-tarih" class="tarih"></div>
+        </div>
+      </div>
+      <button id="btn-gunluk" class="kucuk-btn" title="Karar günlüğü">📜</button>
+      <button id="btn-menu" class="kucuk-btn" title="Menü">☰</button>
+    </header>
+    <div id="statlar" class="statlar"></div>
+    <div id="donem-cubuk" class="donem-cubuk"><div id="donem-dolu"></div><span id="donem-yazi"></span></div>
+
+    <main class="sahne">
+      <article id="olay-kart" class="kart">
+        <div class="kart-ust"><span id="olay-kat" class="kat"></span></div>
+        <div id="olay-ikon" class="olay-ikon"></div>
+        <h3 id="olay-baslik"></h3>
+        <p id="olay-metin"></p>
+      </article>
+      <div id="secenekler" class="secenekler"></div>
+
+      <article id="sonuc-kart" class="kart sonuc gizli">
+        <div class="gazete">📰 SON DAKİKA</div>
+        <p id="sonuc-metin"></p>
+        <div id="sonuc-degisim" class="degisim"></div>
+        <button id="btn-ileri" class="btn ana">Devam ›</button>
+      </article>
+    </main>
+  </section>
+
+  <!-- SON -->
+  <section id="ekran-son" class="ekran">
+    <div class="son-ic">
+      <div id="son-ikon" class="son-ikon"></div>
+      <h2 id="son-baslik"></h2>
+      <p id="son-metin"></p>
+      <div class="son-kutu">
+        <div><b id="son-sure"></b><span>Görev süresi</span></div>
+        <div><b id="son-karar"></b><span>Karar</span></div>
+        <div><b id="son-puan"></b><span>Puan</span></div>
+      </div>
+      <p id="son-oy" class="son-oy"></p>
+      <p id="son-rekor" class="rekor"></p>
+      <button id="btn-tekrar" class="btn ana">Yeni Oyun</button>
+      <button id="btn-son-gunluk" class="btn ikincil">Kararlarıma Bak</button>
+    </div>
+  </section>
+
+  <!-- PENCERELER -->
+  <div id="pencere" class="pencere gizli">
+    <div class="pencere-ic">
+      <button class="kapat" id="pencere-kapat">✕</button>
+      <div id="pencere-icerik"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/ulkeler.js"></script>
+<script src="js/olaylar.js"></script>
+<script src="js/motor.js"></script>
+<script src="js/arayuz.js"></script>
+</body>
+</html>
