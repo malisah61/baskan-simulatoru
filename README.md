@@ -6,12 +6,16 @@ Mehmet Ali'nin (malisah61) mobil başkanlık simülatörü. Dünyadaki 197 ülke
 - `index.html` dosyasını telefonda bir tarayıcıda (ya da Acode önizlemesinde) aç. İnternet gerekmez.
 - 👥 Halk, 💰 Hazine, 🪖 Ordu, 🌐 Dış İlişkiler: biri 0'a düşerse görevden düşersin. Ordu 100'e çıkarsa darbe olur.
 - Her 4 yılda (24 tur) seçim var. Anayasa değişmedikçe en fazla 2 dönem.
+- 👔 Bakanların seçenek önerir (💼 🛡️ 🕊️); onları dinlemezsen istifa edebilirler.
+- 🎯 Her dönemin başında halka bir söz verirsin; seçimde hesabı sorulur.
+- 🏅 Başarımları ve 9 farklı sonu topla.
 
 ## Yapı
 | Dosya | İçerik |
 |---|---|
 | `js/ulkeler.js` | 197 ülke: bölge, nüfus, zenginlik (1-5), askeri güç (1-5), komşular |
 | `js/olaylar.js` | Senaryolar (ana, takip, kriz) ve seçim olayı |
+| `js/olaylar2.js` | Geçmiş kararların geri döndüğü olaylar, bölgeye özel olaylar, bakan istifası |
 | `js/motor.js` | Oyun kuralları. Tarayıcıdan bağımsız, node ile test edilir |
 | `js/arayuz.js` | Ekranlar, dokunmatik etkileşim, kayıt (localStorage) |
 | `css/stil.css` | Mobil öncelikli koyu tema |

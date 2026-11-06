@@ -18,6 +18,7 @@
       <p class="alt">Bir ülke seç. Her kararın halkı, hazineyi, orduyu ve dünyayı değiştirir.</p>
       <button id="btn-devam" class="btn ana gizli">▶ Devam Et</button>
       <button id="btn-yeni" class="btn ana">Yeni Oyun</button>
+      <button id="btn-basarim" class="btn ikincil">🏅 Başarımlar ve Sonlar</button>
       <button id="btn-nasil" class="btn ikincil">Nasıl Oynanır?</button>
       <p id="rekor" class="rekor"></p>
     </div>
@@ -47,11 +48,13 @@
           <div id="o-tarih" class="tarih"></div>
         </div>
       </div>
+      <button id="btn-kabine" class="kucuk-btn" title="Kabine">👔</button>
       <button id="btn-gunluk" class="kucuk-btn" title="Karar günlüğü">📜</button>
       <button id="btn-menu" class="kucuk-btn" title="Menü">☰</button>
     </header>
     <div id="statlar" class="statlar"></div>
     <div id="donem-cubuk" class="donem-cubuk"><div id="donem-dolu"></div><span id="donem-yazi"></span></div>
+    <button id="vaat-cip" class="vaat-cip gizli"></button>
 
     <main class="sahne">
       <article id="olay-kart" class="kart">
@@ -77,17 +80,22 @@
       <div id="son-ikon" class="son-ikon"></div>
       <h2 id="son-baslik"></h2>
       <p id="son-metin"></p>
+      <div id="son-miras" class="miras"></div>
       <div class="son-kutu">
         <div><b id="son-sure"></b><span>Görev süresi</span></div>
         <div><b id="son-karar"></b><span>Karar</span></div>
         <div><b id="son-puan"></b><span>Puan</span></div>
       </div>
       <p id="son-oy" class="son-oy"></p>
+      <div id="son-grafik" class="grafik"></div>
+      <div id="son-rozet" class="son-rozet"></div>
       <p id="son-rekor" class="rekor"></p>
       <button id="btn-tekrar" class="btn ana">Yeni Oyun</button>
       <button id="btn-son-gunluk" class="btn ikincil">Kararlarıma Bak</button>
     </div>
   </section>
+
+  <div id="bildirim" class="bildirim gizli"></div>
 
   <!-- PENCERELER -->
   <div id="pencere" class="pencere gizli">
@@ -100,6 +108,7 @@
 
 <script src="js/ulkeler.js"></script>
 <script src="js/olaylar.js"></script>
+<script src="js/olaylar2.js"></script>
 <script src="js/motor.js"></script>
 <script src="js/arayuz.js"></script>
 </body>
