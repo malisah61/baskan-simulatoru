@@ -191,3 +191,23 @@ h1 span { color: var(--altin); font-size: 46px; }
 .rozet-sira { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 8px 0; }
 .rozet-sira span { background: var(--kart2); border: 1px solid var(--cizgi); border-radius: 99px; padding: 5px 10px; font-size: 13px; }
 @media (max-width: 360px) { .rozetler { grid-template-columns: 1fr; } }
+
+/* ───── v0.3: bütçe, muhalefet, hikâye zincirleri, uyarılar ───── */
+.kucuk-btn { width: 38px; height: 38px; margin-left: 4px; font-size: 17px; }
+.uyari { margin: 6px var(--yari) 0; padding: 6px 10px; border-radius: 10px; font-size: 12.5px; line-height: 1.4; background: rgba(255,93,108,.12); border: 1px solid rgba(255,93,108,.5); color: #ffc3c9; animation: nabiz 1.6s infinite; }
+.zincir { font-size: 11px; color: var(--altin2); background: rgba(180,140,255,.14); border: 1px solid rgba(180,140,255,.4); padding: 3px 9px; border-radius: 99px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
+.zincir b { color: var(--yazi); margin-left: 2px; }
+.kisilik { display: inline-block; margin-top: 4px; font-size: 11.5px; background: var(--zemin2); border: 1px solid var(--cizgi); border-radius: 99px; padding: 2px 8px; color: #cfd8ee; }
+.bakan-alt { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+.gorevden { flex: none; font-size: 12px; padding: 5px 9px; border-radius: 9px; background: var(--zemin2); border: 1px solid var(--cizgi); color: var(--soluk); }
+.gorevden.onay { border-color: var(--kirmizi); color: var(--kirmizi); }
+.butce-satir { background: var(--kart); border: 1px solid var(--cizgi); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+.butce-ad { font-weight: 700; font-size: 14px; margin-bottom: 7px; }
+.segment { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.seg { padding: 9px 4px; border-radius: 9px; background: var(--zemin2); border: 1px solid var(--cizgi); font-size: 13.5px; color: var(--soluk); }
+.seg.secili { background: var(--altin); color: #1b1300; border-color: var(--altin); font-weight: 700; }
+.seg:disabled { opacity: .55; }
+.seg.secili:disabled { opacity: .8; }
+.butce-etki { background: var(--zemin2); border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 700; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.butce-kilit { text-align: center; color: var(--soluk); font-size: 14px; }
+@media (max-width: 360px) { .kucuk-btn { width: 34px; height: 34px; margin-left: 3px; } .ulke-bilgi .bayrak { font-size: 28px; } }

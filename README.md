@@ -8,6 +8,9 @@ Mehmet Ali'nin (malisah61) mobil başkanlık simülatörü. Dünyadaki 197 ülke
 - Her 4 yılda (24 tur) seçim var. Anayasa değişmedikçe en fazla 2 dönem.
 - 👔 Bakanların seçenek önerir (💼 🛡️ 🕊️); onları dinlemezsen istifa edebilirler.
 - 🎯 Her dönemin başında halka bir söz verirsin; seçimde hesabı sorulur.
+- 🧮 Yılda bir bütçeyi ayarla: vergi, savunma, sosyal harcama, diplomasi.
+- 📣 Muhalefet liderine dikkat: seçimden önce canlı yayında tartışırsınız.
+- 📖 Hikâye zincirleri: birkaç olay süren, kararına göre farklı biten hikâyeler.
 - 🏅 Başarımları ve 9 farklı sonu topla.
 
 ## Yapı
@@ -16,6 +19,7 @@ Mehmet Ali'nin (malisah61) mobil başkanlık simülatörü. Dünyadaki 197 ülke
 | `js/ulkeler.js` | 197 ülke: bölge, nüfus, zenginlik (1-5), askeri güç (1-5), komşular |
 | `js/olaylar.js` | Senaryolar (ana, takip, kriz) ve seçim olayı |
 | `js/olaylar2.js` | Geçmiş kararların geri döndüğü olaylar, bölgeye özel olaylar, bakan istifası |
+| `js/olaylar3.js` | Muhalefet ve TV tartışması, saray kuşatması, hikâye zincirleri, yeni geri dönüşler |
 | `js/motor.js` | Oyun kuralları. Tarayıcıdan bağımsız, node ile test edilir |
 | `js/arayuz.js` | Ekranlar, dokunmatik etkileşim, kayıt (localStorage) |
 | `css/stil.css` | Mobil öncelikli koyu tema |
@@ -27,6 +31,6 @@ node test/sim.test.mjs
 ```
 
 ## Senaryo yazmak
-`js/olaylar.js` başındaki açıklamaya bak. Yer tutucular: `{ulke}`, `{komsu}`, `{rakip}`, `{guc}`. Yer tutucudan hemen sonra Türkçe ek getirme ("{komsu} ile", "{komsu} hükümeti" gibi yaz), çünkü ülke adına göre ek değişir.
+`js/olaylar.js` başındaki açıklamaya bak. Yer tutucular: `{ulke}`, `{komsu}`, `{rakip}`, `{guc}`, `{muhalif}`, `{bakan_z}`/`{bakan_o}`/`{bakan_d}`. Yer tutucudan hemen sonra Türkçe ek getirme ("{komsu} ile", "{komsu} hükümeti" gibi yaz), çünkü ülke adına göre ek değişir.
 
 Gelişim planı ve yapılanlar: [YOL-HARITASI.md](YOL-HARITASI.md)

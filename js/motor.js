@@ -1,7 +1,7 @@
 // OYUN MOTORU — tarayıcıdan bağımsızdır (node ile test edilebilir).
 (function (G) {
   const V = () => G.VERI;
-  const KAYIT_SURUMU = 2;
+  const KAYIT_SURUMU = 3;
   const TUR_AY = 2;            // her tur 2 ay
   const DONEM_TUR = 24;        // 4 yıl = 24 tur
   const DONEM_SINIRI = 2;      // anayasa değişmezse en fazla 2 dönem
@@ -17,6 +17,34 @@
     o: { ad: 'Savunma', ikon: '🛡️' },
     d: { ad: 'Dışişleri', ikon: '🕊️' }
   };
+  // Bakan kişilikleri: kendi alanının yanında bir göstergeye daha önem verir
+  const KISILIKLER = {
+    sahin: { ad: 'Şahin', ikon: '🦅', stat: 'o', aciklama: 'Güçlü ordudan yana' },
+    guvercin: { ad: 'Güvercin', ikon: '🕊️', stat: 'd', aciklama: 'Diplomasiden yana' },
+    teknokrat: { ad: 'Teknokrat', ikon: '📐', stat: 'z', aciklama: 'Rakamlara bakar' },
+    populist: { ad: 'Popülist', ikon: '📣', stat: 'h', aciklama: 'Halkın nabzını tutar' }
+  };
+  const BAKAN_DEGISIM_ARALIK = 6;   // bir bakanı görevden aldıktan sonra 1 yıl beklenir
+
+  // ───── Yıllık bütçe (Democracy tarzı kollar) ─────
+  // Her kol 0 = düşük, 1 = normal, 2 = yüksek. Etkiler her 3 turda (6 ayda) bir uygulanır.
+  const BUTCE = {
+    vergi: { ad: 'Vergiler', ikon: '🧾', etki: [{ h: 1, z: -2 }, {}, { h: -1, z: 2 }], seviye: ['Düşük', 'Normal', 'Yüksek'] },
+    savunma: { ad: 'Savunma harcaması', ikon: '🪖', etki: [{ o: -1, z: 1 }, {}, { o: 2, z: -1 }], seviye: ['Kısık', 'Normal', 'Bol'] },
+    sosyal: { ad: 'Sosyal harcama', ikon: '🏥', etki: [{ h: -1, z: 1 }, {}, { h: 1, z: -1 }], seviye: ['Kısık', 'Normal', 'Bol'] },
+    diplomasi: { ad: 'Dış yardım ve elçilikler', ikon: '🌐', etki: [{ d: -1, z: 1 }, {}, { d: 1, z: -1 }], seviye: ['Kısık', 'Normal', 'Bol'] }
+  };
+  const BUTCE_ARALIK = 6;          // bütçe yılda bir (6 turda bir) değiştirilebilir
+
+  // ───── Hikâye zincirleri (Suzerain tarzı, birden çok halkalı) ─────
+  const ZINCIRLER = {
+    liman: { ad: 'Liman Dosyası', toplam: 4 },
+    referandum: { ad: 'Vadi Referandumu', toplam: 4 },
+    salgin_asi: { ad: 'Aşı Yarışı', toplam: 3 }
+  };
+  const GURUR = ['olimpiyat', 'uzay', 'yerli_otomobil', 'yerli_savunma', 'baraj', 'santral', 'sulama', 'cip', 'yesil_enerji'];
+  const LEKE = ['sansur', 'sert_yonetim', 'yolsuz', 'hile'];
+
   // Kurmaca isimler (gerçek kişiler değildir)
   const ISIMLER = {
     TR: ['Selin Aksoy', 'Kemal Yıldız', 'Deniz Arslan', 'Murat Kaya', 'Ece Demir', 'Burak Şahin', 'Zeynep Tunç', 'Levent Öztürk'],
@@ -36,8 +64,15 @@
     dunya: { t: 'Dünyada saygın olacağız (Dış İlişkiler ≥ 60)', kisa: 'Dış İlişkiler ≥ 60', s: 'Diplomatlar "dünyaya açılım" planını hazırlamaya başladı.', kontrol: s => s.stat.d >= 60, deger: s => s.stat.d },
     guvenlik: { t: 'Güçlü ama ölçülü bir ordu (Ordu 45-75)', kisa: 'Ordu 45-75 arası', s: 'Generaller de barış yanlıları da bu sözden memnun.', kontrol: s => s.stat.o >= 45 && s.stat.o <= 75, deger: s => s.stat.o },
     denge: { t: 'Hiçbir alanı ihmal etmeyeceğim (hiçbiri 30 altına düşmesin)', kisa: 'Hiçbir gösterge 30 altına düşmesin', s: '"Dengeli yönetim" sözü verdin. Tek bir hata bu sözü bozabilir.', kontrol: s => !s.vaat.ihlal && STATLAR.every(k => s.stat[k] >= 30), deger: s => Math.min(...STATLAR.map(k => s.stat[k])) },
-    sakin: { t: 'Kriz değil istikrar (en fazla 2 kriz olayı)', kisa: 'En fazla 2 kriz', s: '"Artık kriz haberleri bitecek" dedin. Gazeteciler sayacak.', kontrol: s => (s.vaat.kriz || 0) <= 2, deger: s => s.vaat.kriz || 0 }
+    sakin: { t: 'Kriz değil istikrar (en fazla 2 kriz olayı)', kisa: 'En fazla 2 kriz', s: '"Artık kriz haberleri bitecek" dedin. Gazeteciler sayacak.', kontrol: s => (s.vaat.kriz || 0) <= 2, deger: s => s.vaat.kriz || 0 },
+    // Karara dayalı sözler (v0.3)
+    temiz: { t: 'Temiz yönetim (sansür, sert yönetim ve yolsuzluk yok)', kisa: 'Yeni leke yok', oy: 8, s: '"Bu dönem tek bir gazete kapanmayacak, tek bir kuruş çalınmayacak" dedin. Muhalefet bile alkışladı.', kontrol: s => !s.vaat.leke, deger: s => s.vaat.leke ? 1 : 0 },
+    proje: { t: 'Büyük bir gurur projesi başlatacağım', kisa: 'Yeni büyük proje', oy: 7, s: 'Mitingde maket gösterdin: "Bu dönemin sonunda temeli atılmış olacak."', kontrol: s => GURUR.some(f => s.bayrak[f] && !(s.vaat.bas || []).includes(f)), deger: s => GURUR.filter(f => s.bayrak[f] && !(s.vaat.bas || []).includes(f)).length },
+    kabine: { t: 'Uyumlu bir kabine (ortalama sadakat ≥ 60)', kisa: 'Kabine sadakati ≥ 60', s: '"Ekibimle omuz omuza çalışacağım" dedin. Bakanlar birbirine baktı.', kontrol: s => kabineOrt(s) >= 60, deger: s => Math.round(kabineOrt(s)) },
+    butce: { t: 'Vergileri artırmayacağım (vergi yüksek olmasın, hazine ≥ 35)', kisa: 'Vergi artışı yok, hazine ≥ 35', s: '"Cebinizden tek kuruş fazla almayacağım" dedin. Maliye bürokratları yutkundu.', kontrol: s => !s.vaat.vergiArtti && s.stat.z >= 35, deger: s => s.stat.z },
+    baris: { t: 'Barışçı dönem (Dış ≥ 55, Ordu ≤ 70)', kisa: 'Dış ≥ 55 ve Ordu ≤ 70', s: '"Silah değil kalem" sözü duvarlara yazıldı.', kontrol: s => s.stat.d >= 55 && s.stat.o <= 70, deger: s => s.stat.d }
   };
+  function kabineOrt(s) { return s.kabine ? Object.values(s.kabine).reduce((a, b) => a + b.sadakat, 0) / 3 : 50; }
 
   // ───── Başarımlar ─────
   const ROZETLER = {
@@ -56,7 +91,11 @@
     kara_altin: { ikon: '🛢️', ad: 'Kara Altın', aciklama: 'Petrol bul.' },
     uzay: { ikon: '🚀', ad: 'Uzay Çağı', aciklama: 'Uzay programı başlat.' },
     temiz: { ikon: '🕊️', ad: 'Tertemiz Sicil', aciklama: 'Sansür, sert yönetim, yolsuzluk ve hile olmadan iki dönemi tamamla.' },
-    darbe: { ikon: '🎖️', ad: 'Tanklar Kapıda', aciklama: 'Ordunu o kadar büyüt ki darbe yapsın.' }
+    darbe: { ikon: '🎖️', ad: 'Tanklar Kapıda', aciklama: 'Ordunu o kadar büyüt ki darbe yapsın.' },
+    tartisma: { ikon: '🎙️', ad: 'Kürsünün Hâkimi', aciklama: 'TV tartışmasında rakibini yen.' },
+    zincir: { ikon: '📖', ad: 'Hikâyenin Sonu', aciklama: 'Bir hikâye zincirini sonuna kadar götür.' },
+    muhalefet_dibi: { ikon: '🫥', ad: 'Rakipsiz', aciklama: 'Muhalefetin gücünü 15\'in altına düşür.' },
+    ayaklanma: { ikon: '🔥', ad: 'Kıl Payı Kurtuluş', aciklama: 'Halk ayaklanmasını bastırmadan atlat.' }
   };
 
   // Basit tohumlu rastgele sayı üreteci (kayıtlar tutarlı kalsın)
@@ -73,7 +112,12 @@
   function yeniBakan(s, haric) {
     const kullanilan = Object.values(s.kabine || {}).map(b => b.ad).concat(haric || []);
     const havuz = isimHavuzu(ulke(s)).filter(a => !kullanilan.includes(a));
-    return { ad: sec(s, havuz.length ? havuz : isimHavuzu(ulke(s))), sadakat: 55 };
+    return { ad: sec(s, havuz.length ? havuz : isimHavuzu(ulke(s))), sadakat: 55, kisilik: sec(s, Object.keys(KISILIKLER)) };
+  }
+  function muhalefetKur(s) {
+    const haric = Object.values(s.kabine || {}).map(b => b.ad);
+    const havuz = isimHavuzu(ulke(s)).filter(a => !haric.includes(a));
+    s.muhalefet = { ad: sec(s, havuz), guc: 35, enDusuk: 35 };
   }
   function kabineKur(s) {
     s.kabine = {};
@@ -93,11 +137,14 @@
       },
       bayrak: {}, kuyruk: [], kullanilan: {}, gecmis: [], rakip: null, bitti: null,
       aktif: null, erkenSecim: false, kararSayisi: 0, donemSonuTur: DONEM_TUR - 1,
-      kabine: null, vaat: null, iz: [], rozet: {}, secimler: []
+      kabine: null, vaat: null, iz: [], rozet: {}, secimler: [],
+      butce: { vergi: 1, savunma: 1, sosyal: 1, diplomasi: 1 }, butceSonraki: 0, sonBakanDegisim: -99,
+      muhalefet: null, tartisma: null, zincir: {}
     };
     // Tarihi rakip: komşulardan biri (yoksa bir büyük güç)
     s.rakip = u.komsular.length ? sec(s, u.komsular) : null;
     kabineKur(s);
+    muhalefetKur(s);
     s.iz.push(STATLAR.map(k => s.stat[k]));
     s.vaatBekliyor = true;
     sonrakiOlay(s);
@@ -135,6 +182,8 @@
     }
     b.ulke = u.ad;
     b.rakip = s.rakip ? V().ULKELER[s.rakip].ad : b.komsu;
+    if (s.muhalefet) b.muhalif = s.muhalefet.ad;
+    if (s.kabine) Object.keys(BAKANLIKLAR).forEach(k => { if (s.kabine[k]) b['bakan_' + k] = s.kabine[k].ad; });
     if (b.bakanK && s.kabine && s.kabine[b.bakanK]) {
       b.bakan = s.kabine[b.bakanK].ad;
       b.bakanlik = BAKANLIKLAR[b.bakanK].ad;
@@ -179,6 +228,12 @@
       s.aktif = { id: 'secim', b: baglamOlustur(s) };
       return;
     }
+    // 1b) Seçimden hemen önce TV tartışması (dönemde bir kez)
+    if (s.donemSonuTur - s.tur === 1 && s.tartismaDonem !== s.donem && V().OLAYLAR.some(o => o.id === 'tartisma')) {
+      s.tartismaDonem = s.donem;
+      s.aktif = { id: 'tartisma', b: baglamOlustur(s) };
+      return;
+    }
     // 2) Yeni dönemin sözü
     if (s.vaatBekliyor) {
       s.vaatBekliyor = false;
@@ -202,8 +257,9 @@
     // 4) Kriz olayları (en fazla her 3 turda bir)
     if (s.sonKriz === undefined || s.tur - s.sonKriz >= 3) {
       const krizler = V().OLAYLAR.filter(o => o.kriz && uygun(o));
+      const oncelikli = krizler.filter(o => o.oncelik);
       if (krizler.length) {
-        const o = sec(s, krizler);
+        const o = sec(s, oncelikli.length ? oncelikli : krizler);
         s.sonKriz = s.tur;
         s.kullanilan[o.id] = s.tur;
         if (s.vaat) s.vaat.kriz = (s.vaat.kriz || 0) + 1;
@@ -241,8 +297,9 @@
     const etkiler = o.sec.map(x => beklenenEtki(s, x));
     Object.keys(BAKANLIKLAR).forEach(k => {
       let en = -1, enV = -1e9, tum = new Set();
+      const ks = KISILIKLER[s.kabine[k].kisilik];
       etkiler.forEach((e, i) => {
-        let v = e[k];
+        let v = e[k] + (ks && ks.stat !== k ? e[ks.stat] * 0.5 : 0);
         // Savunma bakanı bile darbeyi istemez
         if (k === 'o' && s.stat.o + v >= 95) v = -v;
         tum.add(Math.round(v));
@@ -260,7 +317,8 @@
     const b = s.aktif.b;
     const on = oneriler(s);
     return {
-      id: o.id, kat: o.kat, ikon: o.ikon, baslik: doldur(o.baslik, b), metin: doldur(o.metin, b),
+      id: o.id, kat: o.kat, ikon: o.ikon, baslik: doldur(o.baslik, b), metin: doldur(typeof o.metin === 'function' ? o.metin(s) : o.metin, b),
+      zincir: o.zincir ? { ad: ZINCIRLER[o.zincir].ad, adim: o.adim, toplam: ZINCIRLER[o.zincir].toplam } : null,
       secenekler: o.sec.map((x, i) => ({
         t: doldur(x.t, b), ipucu: ipucu(s, x), riskli: !!x.risk,
         sans: x.risk ? basariSansi(s, x.risk.stat) : null,
@@ -328,7 +386,7 @@
     if (!x) return null;
     const b = s.aktif.b;
     const once = Object.assign({}, s.stat);
-    let metin = x.s;
+    let metin = typeof x.s === 'function' ? x.s(s) : x.s;
     let basarili = true;
 
     if (o.id === 'secim') return secimSonucu(s, x, once);
@@ -343,8 +401,18 @@
     }
     const e = efektHesapla(s, fx);
     STATLAR.forEach(k => { s.stat[k] = sinirla(s.stat[k] + e[k]); });
-    if (x.bayrak && basarili) s.bayrak[x.bayrak] = true;
-    if (x.vaat) s.vaat = { id: x.vaat, donem: s.donem, kriz: 0, ihlal: false };
+    if (x.bayrak && basarili) {
+      if (s.vaat && s.vaat.donem === s.donem && LEKE.includes(x.bayrak)) s.vaat.leke = true;
+      s.bayrak[x.bayrak] = true;
+    }
+    if (x.vaat) s.vaat = { id: x.vaat, donem: s.donem, kriz: 0, ihlal: false, bas: GURUR.filter(f => s.bayrak[f]) };
+    if (o.zincir) {
+      s.zincir = s.zincir || {};
+      s.zincir[o.zincir] = o.adim;
+      if (o.adim >= ZINCIRLER[o.zincir].toplam) rozetVer(s, 'zincir');
+    }
+    if (x.rozet && basarili) rozetVer(s, x.rozet);
+    if (x.muhalefet && s.muhalefet) s.muhalefet.guc = Math.max(5, Math.min(95, s.muhalefet.guc + x.muhalefet));
     if (x.sonuc && basarili) x.sonuc(s);
     if (x.sonucKotu && !basarili) x.sonucKotu(s);
     const takipler = basarili ? (x.sonra || []) : (x.risk && x.risk.sonraKotu) || [];
@@ -384,7 +452,18 @@
     if (kampanya === 'hile') d.push(['Sandık hilesi', 15]);
     if (s.vaat && s.vaat.donem === s.donem) {
       const tuttu = VAATLER[s.vaat.id].kontrol(s);
-      d.push([tuttu ? 'Sözünü tuttun' : 'Sözünü tutamadın', tuttu ? 6 : -5]);
+      const agir = VAATLER[s.vaat.id].oy || 6;
+      d.push([tuttu ? 'Sözünü tuttun' : 'Sözünü tutamadın', tuttu ? agir : -(agir - 1)]);
+    }
+    if (s.muhalefet) {
+      const v = Math.round(-(s.muhalefet.guc - 40) * 0.15 * 10) / 10;
+      if (v) d.push(['Muhalefet: ' + s.muhalefet.ad, v]);
+    }
+    if (typeof s.tartisma === 'number' && s.tartisma) d.push(['TV tartışması', s.tartisma]);
+    if (s.butce) {
+      if (s.butce.vergi === 2) d.push(['Yüksek vergiler', -2]);
+      if (s.butce.vergi === 0) d.push(['Vergi indirimi', 2]);
+      if (s.butce.sosyal === 2) d.push(['Sosyal harcamalar', 1.5]);
     }
     if (s.kabine) {
       const ort = Object.values(s.kabine).reduce((a, b) => a + b.sadakat, 0) / 3;
@@ -446,6 +525,7 @@
         s.stat.h = sinirla(s.stat.h + 6); // seçim zaferi balayı
       }
     }
+    s.tartisma = null;
     if (!s.bitti) {
       s.tur++;
       s.donemSonuTur = s.tur + DONEM_TUR - 1; // yeni dönem tam 4 yıl
@@ -512,6 +592,26 @@
       else if (u.zenginlik <= 2) gelir = 0;
       s.stat.z = sinirla(s.stat.z + Math.max(-1, Math.min(2, gelir)));
     }
+    // Yıllık bütçe kollarının etkisi (6 ayda bir)
+    if (s.butce && s.tur % 3 === 0) {
+      const e = butceEtkisi(s);
+      STATLAR.forEach(k => { if (e[k]) s.stat[k] = sinirla(s.stat[k] + e[k]); });
+    }
+    // Muhalefet: halk küskünse güçlenir, halk memnunsa söner
+    if (s.muhalefet) {
+      const m = s.muhalefet;
+      if (s.stat.h < 35) m.guc += 1.6; else if (s.stat.h < 50) m.guc += 0.8; else if (s.stat.h > 65) m.guc -= 0.8; else m.guc -= 0.1;
+      if (s.bayrak.yolsuz || s.bayrak.sansur) m.guc += 0.2;
+      m.guc = Math.max(5, Math.min(95, Math.round(m.guc * 10) / 10));
+      m.enDusuk = Math.min(m.enDusuk || 99, m.guc);
+      if (m.guc < 15) rozetVer(s, 'muhalefet_dibi');
+    }
+    // Sokak öfkesi: halk 20'nin altına inince öfke kendi kendini besler (her tur −1)
+    if (s.stat.h < 20 && s.stat.h > 0) { s.stat.h = sinirla(s.stat.h - 1); s.sokakOfkesi = (s.sokakOfkesi || 0) + 1; } else s.sokakOfkesi = 0;
+    // Kasa boşalınca maaşlar gecikir, öfke sokağa taşar
+    if (s.stat.z < 15) s.stat.h = sinirla(s.stat.h - 1);
+    // Güçlü muhalefet halkı sokağa döker
+    if (s.muhalefet && s.muhalefet.guc >= 70 && s.tur % 3 === 0) s.stat.h = sinirla(s.stat.h - 1);
     // İktidar yıpranması: halk desteği zamanla azalır
     if (s.tur % 3 === 1) s.stat.h = sinirla(s.stat.h - 1);
     if (s.stat.h > 80 && s.tur % 2 === 1) s.stat.h = sinirla(s.stat.h - 1);
@@ -547,6 +647,8 @@
     if (B.sansur && B.sert_yonetim) return { unvan: 'Demir Yumruk', aciklama: 'Düzeni sağladın ama sessizliğin bedeli ağırdı.' };
     if (t === 'omur_boyu') return { unvan: 'Ebedi Lider', aciklama: 'Bir neslin tanıdığı tek başkan sendin.' };
     if (s.tur < 6) return { unvan: 'Mevsimlik Başkan', aciklama: 'Adını öğrenmeye fırsat bulamadılar.' };
+    if (B.liman_temiz || B.seffaf_liman) return { unvan: 'Temiz Eller', aciklama: 'Limandaki kirli ağı sonuna kadar kovaladın.' };
+    if (B.ozerklik_verildi && (s.refPuan || 0) >= 3) return { unvan: 'Birliğin Mimarı', aciklama: 'Vadiyi silahla değil, sözle ve yatırımla ikna ettin.' };
     if (B.uzay && B.cevreci) return { unvan: 'Geleceğin Mimarı', aciklama: 'Hem gökyüzüne hem doğaya yatırım yaptın.' };
     if (B.cevreci) return { unvan: 'Yeşil Başkan', aciklama: 'Ormanlar ve nehirler senin döneminde nefes aldı.' };
     if (h >= 62) return { unvan: 'Halkın Sevgilisi', aciklama: 'Meydanlarda adın hâlâ sevgiyle anılıyor.' };
@@ -594,6 +696,47 @@
     return { id: s.vaat.id, kisa: v.kisa, tutuyor: v.kontrol(s), deger: v.deger(s) };
   }
 
+  // ───── Bütçe ─────
+  function butceEtkisi(s, butce) {
+    const b = butce || s.butce || {};
+    const r = {}; STATLAR.forEach(k => { r[k] = 0; });
+    Object.keys(BUTCE).forEach(kol => {
+      const e = BUTCE[kol].etki[b[kol] === undefined ? 1 : b[kol]];
+      Object.keys(e).forEach(k => { r[k] += e[k]; });
+    });
+    // Fakir ülkede vergi tabanı dar: yüksek vergi daha az getirir
+    if (r.z > 0 && ulke(s).zenginlik <= 2) r.z = Math.max(1, r.z - 1);
+    return r;
+  }
+  function butceAyarla(s, yeni) {
+    if (!s || s.bitti) return { ok: false, neden: 'Oyun bitti.' };
+    if (s.tur < (s.butceSonraki || 0)) return { ok: false, neden: 'Bütçe yılda bir değişir. Sonraki bütçe: ' + tarihMetni({ tur: s.butceSonraki }) };
+    const b = {};
+    Object.keys(BUTCE).forEach(k => { const v = yeni[k] === undefined ? s.butce[k] : yeni[k]; b[k] = Math.max(0, Math.min(2, v | 0)); });
+    const degisti = Object.keys(BUTCE).some(k => b[k] !== s.butce[k]);
+    if (!degisti) return { ok: true, degisti: false };
+    if (b.vergi > s.butce.vergi && s.vaat && s.vaat.donem === s.donem) s.vaat.vergiArtti = true;
+    s.butce = b;
+    s.butceSonraki = s.tur + BUTCE_ARALIK;
+    return { ok: true, degisti: true };
+  }
+  function butceDurumu(s) {
+    return { butce: Object.assign({}, s.butce), etki: butceEtkisi(s), acik: s.tur >= (s.butceSonraki || 0), sonraki: tarihMetni({ tur: s.butceSonraki || 0 }) };
+  }
+
+  // ───── Bakanı görevden al ─────
+  function bakanDegistir(s, k) {
+    if (!s || s.bitti || !s.kabine || !s.kabine[k]) return { ok: false, neden: 'Bakan yok.' };
+    if (s.tur - (s.sonBakanDegisim === undefined ? -99 : s.sonBakanDegisim) < BAKAN_DEGISIM_ARALIK) return { ok: false, neden: 'Kabinede yeni bir değişiklik için bir yıl beklemelisin.' };
+    const eski = s.kabine[k].ad;
+    s.kabine[k] = yeniBakan(s, [eski]);
+    s.kabine[k].sadakat = 60;      // yeni bakan sana minnettar
+    Object.keys(s.kabine).forEach(x => { if (x !== k) s.kabine[x].sadakat = sinirla(s.kabine[x].sadakat - 5); });
+    s.stat.h = sinirla(s.stat.h - 2);
+    s.sonBakanDegisim = s.tur;
+    return { ok: true, eski, yeni: s.kabine[k].ad };
+  }
+
   function kayitYukle(veri) {
     if (!veri || typeof veri !== 'object') return null;
     if (!veri.surum || !veri.kod || !V().ULKELER[veri.kod]) return null;
@@ -606,6 +749,16 @@
       veri.secimler = veri.secimler || [];
       if (veri.bitti && veri.istifa) veri.bitti.tip = 'istifa';
     }
+    // Sürüm 2 → 3: bakan kişilikleri, bütçe, muhalefet lideri, hikâye zincirleri
+    if (veri.surum < 3) {
+      Object.values(veri.kabine || {}).forEach(b => { if (!b.kisilik) b.kisilik = sec(veri, Object.keys(KISILIKLER)); });
+      veri.butce = veri.butce || { vergi: 1, savunma: 1, sosyal: 1, diplomasi: 1 };
+      veri.butceSonraki = veri.butceSonraki || 0;
+      if (veri.sonBakanDegisim === undefined) veri.sonBakanDegisim = -99;
+      if (!veri.muhalefet) muhalefetKur(veri);
+      veri.zincir = veri.zincir || {};
+      if (veri.tartisma === undefined) veri.tartisma = null;
+    }
     veri.surum = KAYIT_SURUMU;
     return veri;
   }
@@ -613,6 +766,8 @@
   G.MOTOR = {
     yeniOyun, aktifOlay, secimYap, tarihMetni, sonBilgisi, zorluk, kayitYukle, basariSansi, ulke,
     olayBul, oneriler, yeniBakan, vaatDurumu, istifa, miras, puan,
-    STATLAR, STAT_AD, DONEM_TUR, KAYIT_SURUMU, BAKANLIKLAR, ROZETLER, SONLAR, VAATLER
+    butceAyarla, butceDurumu, butceEtkisi, bakanDegistir, kabineOrt,
+    STATLAR, STAT_AD, DONEM_TUR, KAYIT_SURUMU, BAKANLIKLAR, ROZETLER, SONLAR, VAATLER,
+    KISILIKLER, BUTCE, ZINCIRLER, BAKAN_DEGISIM_ARALIK
   };
 })(typeof window !== 'undefined' ? window : globalThis);

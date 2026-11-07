@@ -478,9 +478,9 @@
       metin: 'Meydanlar "İstifa!" diye bağıran kalabalıklarla dolu. Polis şefleri kalabalığı ne kadar tutabileceklerinden emin değil.',
       kosul: s => s.stat.h < 22,
       sec: [
-        O('Kabineyi tamamen değiştir', { h: 10, d: 2, z: -3 }, 'Yeni yüzler biraz nefes aldırdı.'),
-        O('Orduyu sokağa indir', { h: 6, o: -6, d: -10 }, 'Tanklar meydanlarda. Kalabalık dağıldı ama korku her yerde.', { bayrak: 'sert_yonetim' }),
-        O('Halka sesleniş, erken seçim sözü', { h: 12, o: -2 }, 'Sözün kalabalığı yatıştırdı. Ama bir dahaki seçim yakın.', { sonuc: s => { s.erkenSecim = true; } })
+        O('Kabineyi tamamen değiştir', { h: 7, d: 2, z: -4 }, 'Yeni yüzler biraz nefes aldırdı.'),
+        O('Orduyu sokağa indir', { h: 4, o: -6, d: -10 }, 'Tanklar meydanlarda. Kalabalık dağıldı ama korku her yerde.', { bayrak: 'sert_yonetim' }),
+        O('Halka sesleniş, erken seçim sözü', { h: 9, o: -2 }, 'Sözün kalabalığı yatıştırdı. Ama bir dahaki seçim yakın.', { sonuc: s => { s.erkenSecim = true; } })
       ] },
     { id: 'kriz_hazine', kriz: true, kat: 'Kriz', ikon: '🏦', baslik: 'Kasada Para Yok',
       metin: 'Maliye Bakanı titreyen ellerle raporu uzattı: Gelecek ay memur maaşlarını ödeyecek para yok.',

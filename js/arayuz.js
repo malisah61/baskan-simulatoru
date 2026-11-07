@@ -126,6 +126,13 @@
     $('donem-dolu').style.width = (ilerleme * 100) + '%';
     const kalan = Math.max(0, s.donemSonuTur - s.tur);
     $('donem-yazi').textContent = kalan ? `Seçime ${kalan * 2} ay` : 'Seçim zamanı!';
+    // Tehlike uyarısı: sokak öfkesi, boş kasa, güçlü muhalefet
+    const uy = [];
+    if (s.stat.h < 20) uy.push('🔥 Sokaklar ısınıyor: halk her ay biraz daha eriyor');
+    if (s.stat.z < 15) uy.push('💸 Maaşlar gecikiyor: halk sabrını yitiriyor');
+    if (s.muhalefet && s.muhalefet.guc >= 70) uy.push('📣 Muhalefet çok güçlü: ' + s.muhalefet.ad);
+    $('uyari').innerHTML = uy.map(kac).join('<br>');
+    $('uyari').classList.toggle('gizli', !uy.length);
     // Dönem sözü
     const v = MOTOR.vaatDurumu(s);
     const c = $('vaat-cip');
@@ -140,8 +147,11 @@
     $('sonuc-kart').classList.add('gizli');
     $('olay-kart').classList.remove('gizli');
     $('olay-kart').style.animation = 'none'; void $('olay-kart').offsetWidth; $('olay-kart').style.animation = '';
-    $('olay-kart').classList.toggle('ozel-kart', o.id === 'vaat' || o.id === 'bakan_istifa');
+    $('olay-kart').classList.toggle('ozel-kart', ['vaat', 'bakan_istifa', 'tartisma', 'ayaklanma'].includes(o.id) || !!o.zincir);
     $('olay-kat').textContent = o.kat;
+    const zc = $('olay-zincir');
+    zc.classList.toggle('gizli', !o.zincir);
+    if (o.zincir) zc.innerHTML = `📖 ${kac(o.zincir.ad)} <b>${o.zincir.adim}/${o.zincir.toplam}</b>`;
     $('olay-ikon').textContent = o.ikon;
     $('olay-baslik').textContent = o.baslik;
     $('olay-metin').textContent = o.metin;
@@ -313,25 +323,82 @@
       const B = MOTOR.BAKANLIKLAR[k], b = s.kabine[k];
       const ruh = b.sadakat >= 70 ? 'Sana çok bağlı' : b.sadakat >= 40 ? 'İşini yapıyor' : b.sadakat > 15 ? 'Huzursuz' : 'İstifanın eşiğinde';
       const renk = b.sadakat >= 70 ? 'var(--yesil)' : b.sadakat >= 40 ? 'var(--altin)' : 'var(--kirmizi)';
+      const K = MOTOR.KISILIKLER[b.kisilik];
       return `<div class="bakan">
         <div class="bakan-ikon">${B.ikon}</div>
         <div class="bakan-bilgi"><b>${kac(b.ad)}</b><small>${B.ad} Bakanı · ${STAT_IKON[k]} ${MOTOR.STAT_AD[k]} göstergesini korur</small>
+          ${K ? `<span class="kisilik">${K.ikon} ${K.ad} · ${kac(K.aciklama)}</span>` : ''}
           <div class="cubuk"><div class="dolu" style="width:${b.sadakat}%;background:${renk}"></div></div>
-          <small style="color:${renk}">Sadakat ${b.sadakat} · ${ruh}</small></div>
+          <div class="bakan-alt"><small style="color:${renk}">Sadakat ${b.sadakat} · ${ruh}</small>
+          <button class="gorevden" data-k="${k}">Görevden al</button></div></div>
       </div>`;
     }).join('');
+    const m = s.muhalefet;
+    const muh = m ? `<h3 style="margin-top:16px">📣 Muhalefet</h3>
+      <div class="bakan"><div class="bakan-ikon">🎙️</div><div class="bakan-bilgi"><b>${kac(m.ad)}</b>
+        <small>Muhalefet lideri · halk küskünken güçlenir, seçimde oyunu senden alır</small>
+        <div class="cubuk"><div class="dolu" style="width:${m.guc}%;background:var(--kirmizi)"></div></div>
+        <small>Gücü ${Math.round(m.guc)} · ${m.guc >= 70 ? 'Çok tehlikeli' : m.guc >= 50 ? 'Yükselişte' : m.guc >= 30 ? 'Dengede' : 'Zayıf'}</small></div></div>` : '';
     pencereAc(`<h3>👔 Kabine</h3>
       <p class="soluk" style="margin-top:0">Bakanlar her olayda kendi alanını koruyan seçeneği önerir (seçeneklerin altındaki 💼 🛡️ 🕊️ simgeleri). Önerileri dinlenen bakanın sadakati artar; alanına zarar veren kararlar sadakati düşürür. Sadakati 70 üstü olan bakan kendi alanındaki riskli işlerde şansını artırır, dibe vuran bakan istifa mektubu getirir. Kabine uyumu seçimde de oy getirir.</p>
-      ${satir}`);
+      ${satir}
+      <p class="soluk">Bir bakanı görevden alabilirsin (yılda bir kez): halk −2, diğer bakanların sadakati −5. Yeni bakan sana minnettar başlar.</p>
+      ${muh}`);
+    document.querySelectorAll('.gorevden').forEach(btn => btn.onclick = () => {
+      const k = btn.dataset.k;
+      if (btn.dataset.onay !== '1') { btn.dataset.onay = '1'; btn.textContent = 'Emin misin?'; btn.classList.add('onay'); return; }
+      const r = MOTOR.bakanDegistir(s, k);
+      if (!r.ok) { btn.textContent = 'Şimdi olmaz'; btn.title = r.neden; tost('⏳ ' + r.neden); return; }
+      kaydet(); statlariCiz(); kabine();
+      tost(`👔 ${r.eski} gitti, yerine ${r.yeni} geldi.`);
+    });
+  }
+  function tost(metin) {
+    const b = $('bildirim');
+    b.innerHTML = `<span>${kac(metin)}</span>`;
+    b.classList.remove('gizli');
+    b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
+    clearTimeout(bildirimZaman);
+    bildirimZaman = setTimeout(() => b.classList.add('gizli'), 2600);
+  }
+
+  // ───── Bütçe ─────
+  let taslak = null;
+  function butce() {
+    if (!s) return;
+    const d = MOTOR.butceDurumu(s);
+    if (!taslak) taslak = Object.assign({}, d.butce);
+    const etki = MOTOR.butceEtkisi(s, taslak);
+    const etkiYaz = Object.keys(etki).filter(k => etki[k]).map(k => `<span class="${etki[k] > 0 ? 'arti' : 'eksi'}">${STAT_IKON[k]} ${etki[k] > 0 ? '+' : ''}${etki[k]}</span>`).join(' ') || '<span class="soluk">Etkisiz (dengeli bütçe)</span>';
+    const satirlar = Object.keys(MOTOR.BUTCE).map(kol => {
+      const B = MOTOR.BUTCE[kol];
+      return `<div class="butce-satir"><div class="butce-ad">${B.ikon} ${kac(B.ad)}</div>
+        <div class="segment">${B.seviye.map((ad, i) => `<button class="seg${taslak[kol] === i ? ' secili' : ''}" data-kol="${kol}" data-i="${i}" ${d.acik ? '' : 'disabled'}>${ad}</button>`).join('')}</div></div>`;
+    }).join('');
+    pencereAc(`<h3>🧮 Yıllık Bütçe</h3>
+      <p class="soluk" style="margin-top:0">Bütçe kolları her 6 ayda bir göstergelerine dokunur. Yılda bir kez değiştirebilirsin. Yüksek vergi kasayı doldurur ama seçimde oy kaybettirir.</p>
+      ${satirlar}
+      <div class="butce-etki">6 ayda bir: ${etkiYaz}</div>
+      ${d.acik ? '<button class="btn ana" id="btn-butce-onay">Bütçeyi Onayla</button>' : `<p class="butce-kilit">🔒 Bütçe bu yıl onaylandı. Sonraki bütçe: <b>${kac(d.sonraki)}</b></p>`}`);
+    document.querySelectorAll('.seg').forEach(b => b.onclick = () => { taslak[b.dataset.kol] = +b.dataset.i; butce(); });
+    const on = $('btn-butce-onay');
+    if (on) on.onclick = () => {
+      const r = MOTOR.butceAyarla(s, taslak);
+      taslak = null;
+      if (r.ok && r.degisti) { kaydet(); statlariCiz(); tost('🧮 Yeni bütçe meclisten geçti.'); }
+      pencereKapat();
+    };
   }
   function menu() {
     pencereAc(`<h3>Menü</h3>
-      <button class="btn ikincil" id="m-kabine">👔 Kabine</button>
+      <button class="btn ikincil" id="m-kabine">👔 Kabine ve Muhalefet</button>
+      <button class="btn ikincil" id="m-butce">🧮 Yıllık Bütçe</button>
       <button class="btn ikincil" id="m-basarim">🏅 Başarımlar</button>
       <button class="btn ikincil" id="m-nasil">Nasıl Oynanır?</button>
       <button class="btn ikincil" id="m-ana">Ana Menüye Dön (oyun kaydedilir)</button>
       <button class="btn ikincil" id="m-istifa" style="color:var(--kirmizi)">İstifa Et (oyunu bitir)</button>`);
     $('m-kabine').onclick = kabine;
+    $('m-butce').onclick = () => { taslak = null; butce(); };
     $('m-basarim').onclick = basarimlar;
     $('m-nasil').onclick = nasil;
     $('m-ana').onclick = () => { pencereKapat(); kaydet(); girisGoster(); };
@@ -347,9 +414,13 @@
         <li>💼 🛡️ 🕊️ simgeleri o seçeneği hangi bakanının önerdiğini gösterir. Bakanlarını dinlemezsen istifa edebilirler (👔 Kabine).</li>
         <li>🎯 Her dönemin başında halka bir <b>söz</b> verirsin. Tutarsan seçimde oy kazanırsın, tutamazsan kaybedersin.</li>
         <li>🎲 işaretli seçenekler risklidir: şansın ilgili göstergenin gücüne bağlıdır.</li>
+        <li>🧮 <b>Yıllık bütçe</b>: vergi, savunma, sosyal harcama ve diplomasi kollarını yılda bir ayarla; her 6 ayda bir etkisini görürsün.</li>
+        <li>📣 <b>Muhalefet lideri</b> halk küskünken güçlenir. Seçimden önce canlı yayında onunla tartışırsın.</li>
+        <li>📖 <b>Hikâye zincirleri</b> birkaç olay boyunca süren uzun hikâyelerdir; ilk kararın sonunu değiştirir.</li>
+        <li>🔥 Halk 20'nin altına inerse sokaklar ısınır ve destek her ay erir. 12'nin altında saray kuşatılır!</li>
         <li>Bazı kararların sonuçları aylar, hatta yıllar sonra karşına çıkar. Sansür, sert yönetim, çevre ve büyük güçlerle kavgalar unutulmaz.</li>
         <li>Her 4 yılda bir seçim var. Oyların nereden geldiğini seçim sonucunda görürsün. Anayasa izin vermedikçe en fazla 2 dönem görev yapabilirsin.</li>
-        <li>🏅 Başarımları topla, 9 farklı sonu keşfet ve her ülkede rekorunu kır.</li>
+        <li>🏅 Başarımları topla, ${Object.keys(MOTOR.SONLAR).length} farklı sonu keşfet ve her ülkede rekorunu kır.</li>
       </ul>`);
   }
 
@@ -362,13 +433,14 @@
   $('btn-son-gunluk').onclick = gunluk;
   $('btn-gunluk').onclick = gunluk;
   $('btn-kabine').onclick = kabine;
+  $('btn-butce').onclick = () => { taslak = null; butce(); };
   $('btn-menu').onclick = menu;
   $('btn-ileri').onclick = ileri;
   $('vaat-cip').onclick = () => {
     const v = MOTOR.vaatDurumu(s); if (!v) return;
     pencereAc(`<h3>🎯 Dönem Sözün</h3><p><b>${kac(v.kisa)}</b></p>
       <p>Şu an: ${v.tutuyor ? '<span class="arti">sözünü tutuyorsun ✔</span>' : '<span class="eksi">sözünü tutmuyorsun ✖</span>'}</p>
-      <p class="soluk">Seçim günü sözün kontrol edilir: Tutarsan +6 oy, tutamazsan −5 oy.</p>`);
+      <p class="soluk">Seçim günü sözün kontrol edilir: Tutarsan +${MOTOR.VAATLER[v.id].oy || 6} oy, tutamazsan −${(MOTOR.VAATLER[v.id].oy || 6) - 1} oy.</p>`);
   };
   $('bildirim').onclick = () => { $('bildirim').classList.add('gizli'); basarimlar(); };
   $('pencere-kapat').onclick = pencereKapat;

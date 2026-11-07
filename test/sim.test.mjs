@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 const kok = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-for (const f of ['js/ulkeler.js', 'js/olaylar.js', 'js/olaylar2.js', 'js/motor.js']) (0, eval)(readFileSync(path.join(kok, f), 'utf8'));
+for (const f of ['js/ulkeler.js', 'js/olaylar.js', 'js/olaylar2.js', 'js/olaylar3.js', 'js/motor.js']) (0, eval)(readFileSync(path.join(kok, f), 'utf8'));
 const { VERI, MOTOR } = globalThis;
 let hata = 0;
 const kontrol = (kosul, mesaj) => { if (!kosul) { hata++; if (hata < 20) console.error('HATA:', mesaj); } };
@@ -97,6 +97,76 @@ console.log('Hiç çıkmayan olaylar:', hic.join(', ') || 'yok');
   for (let i = 0; i < 10 && !tasinan.bitti; i++) MOTOR.secimYap(tasinan, 1);
   // Miras unvanı
   kontrol(MOTOR.miras(tasinan).unvan, 'miras unvanı');
+}
+
+// ───── v0.3 kuralları: bütçe, bakan değiştirme, muhalefet, TV tartışması, zincirler, kayıt taşıma ─────
+{
+  const s = MOTOR.yeniOyun('TR', 101);
+  MOTOR.secimYap(s, 0);
+  kontrol(s.muhalefet && s.muhalefet.ad, 'muhalefet lideri olmalı');
+  kontrol(Object.values(s.kabine).every(b => MOTOR.KISILIKLER[b.kisilik]), 'her bakanın kişiliği olmalı');
+  // Bütçe: değişir, sonra bir yıl kilitlenir; etkisi uygulanır
+  const r1 = MOTOR.butceAyarla(s, { vergi: 2 });
+  kontrol(r1.ok && r1.degisti && s.butce.vergi === 2, 'bütçe ayarlanmalı');
+  kontrol(!MOTOR.butceAyarla(s, { vergi: 0 }).ok, 'bütçe yılda bir değişmeli');
+  const e = MOTOR.butceEtkisi(s);
+  kontrol(e.z > 0 && e.h < 0, 'yüksek vergi hazineyi artırıp halkı düşürmeli');
+  // Bakan değiştirme: çalışır, sonra bir yıl beklenir
+  const eski = s.kabine.o.ad;
+  const b1 = MOTOR.bakanDegistir(s, 'o');
+  kontrol(b1.ok && s.kabine.o.ad !== eski, 'bakan görevden alınmalı');
+  kontrol(!MOTOR.bakanDegistir(s, 'z').ok, 'bakan değişikliği yılda bir olmalı');
+  // TV tartışması seçimden hemen önce gelir; seçim dökümünde görünür
+  const t = MOTOR.yeniOyun('DE', 55);
+  let gordu = false, dokum = null;
+  for (let i = 0; i < 80 && !t.bitti; i++) {
+    if (t.aktif.id === 'tartisma') { gordu = true; kontrol(t.donemSonuTur - t.tur === 1, 'tartışma seçimden bir tur önce'); }
+    const r = MOTOR.secimYap(t, t.aktif.id === 'secim' ? 0 : enIyi(t, t.aktif.id));
+    if (r && r.secim) { dokum = r.dokum; break; }
+  }
+  kontrol(gordu, 'seçimden önce TV tartışması olmalı');
+  kontrol(dokum && dokum.some(d => d.ad.startsWith('Muhalefet')), 'dökümde muhalefet satırı olmalı');
+  // Hikâye zinciri: liman zinciri sona kadar gider ve başarım verir
+  const z = MOTOR.yeniOyun('BR', 77);
+  MOTOR.secimYap(z, 0);
+  z.aktif = { id: 'liman_1', b: {} };
+  const adimlar = [];
+  for (let i = 0; i < 20 && !z.bitti; i++) {
+    const o = MOTOR.aktifOlay(z);
+    if (o.zincir) adimlar.push(o.zincir.adim);
+    kontrol(!/\{\w+\}/.test(o.metin + o.baslik), 'zincir yer tutucu: ' + o.id);
+    MOTOR.secimYap(z, 0);
+    z.stat.h = Math.max(z.stat.h, 50); z.stat.z = Math.max(z.stat.z, 50); z.stat.d = Math.max(z.stat.d, 50); z.stat.o = 50;
+  }
+  kontrol(adimlar.join(',') === '1,2,3,4', 'liman zinciri 4 adım olmalı: ' + adimlar.join(','));
+  kontrol(z.rozet.zincir, 'zincir başarımı verilmeli');
+  // Referandum zincirinin sonu geçmiş kararlara göre değişir
+  for (const [secimler, beklenen] of [[[1, 1, 0], '%57'], [[2, 2, 1], '%53']]) {
+    const q = MOTOR.yeniOyun('FR', 5); MOTOR.secimYap(q, 0);
+    q.aktif = { id: 'ref_1', b: {} };
+    let son = null;
+    for (let i = 0; i < 25 && !q.bitti; i++) {
+      const o = MOTOR.aktifOlay(q);
+      if (o.id === 'ref_4') { son = o.metin; break; }
+      const idx = { ref_1: secimler[0], ref_2: secimler[1], ref_3: secimler[2] }[o.id];
+      MOTOR.secimYap(q, idx !== undefined ? idx : enIyi(q, o.id));
+      Object.keys(q.stat).forEach(k => { q.stat[k] = 50; });
+    }
+    kontrol(son && son.includes(beklenen), 'referandum sonucu ' + beklenen + ' olmalı: ' + son);
+  }
+  // Ayaklanma krizi halk çok düşükken öncelikli gelir
+  const a = MOTOR.yeniOyun('IT', 3); MOTOR.secimYap(a, 0);
+  a.stat.h = 10; a.sonKriz = -10; a.kuyruk = [];
+  MOTOR.secimYap(a, 1);
+  if (!a.bitti && a.aktif.id !== 'secim') kontrol(a.aktif.id === 'ayaklanma', 'halk 12 altında ayaklanma gelmeli: ' + a.aktif.id);
+  // Sürüm 2 kaydı taşınmalı
+  const k2 = JSON.parse(JSON.stringify(MOTOR.yeniOyun('JP', 8)));
+  delete k2.butce; delete k2.muhalefet; delete k2.zincir; delete k2.butceSonraki; delete k2.sonBakanDegisim;
+  Object.values(k2.kabine).forEach(b => delete b.kisilik); k2.surum = 2;
+  const t2 = MOTOR.kayitYukle(k2);
+  kontrol(t2.surum === 3 && t2.butce && t2.muhalefet && Object.values(t2.kabine).every(b => b.kisilik), 'sürüm 2 → 3 taşıma');
+  for (let i = 0; i < 30 && !t2.bitti; i++) MOTOR.secimYap(t2, i % 3);
+  kontrol(MOTOR.VAATLER.temiz && Object.keys(MOTOR.VAATLER).length >= 11, 'yeni dönem sözleri');
 }
 
 // ───── Denge: rastgele oyuncu, zorluk yıldızına göre ─────
